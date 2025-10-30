@@ -2,6 +2,8 @@
 
 A collection of thread-safe data structures for Go, implemented using goroutines and channels for safe concurrent access.
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/koepkeca/gsds)](https://goreportcard.com/report/github.com/koepkeca/gsds)
+
 ## Overview
 
 This module provides thread-safe implementations of common data structures that can be safely used across multiple goroutines without external synchronization. Each data structure runs its own goroutine and uses channels for communication, ensuring thread safety through Go's concurrency primitives.
@@ -36,6 +38,45 @@ A First-In-First-Out (FIFO) data structure.
 - `Len() int64` - Get the current queue size
 - `Close()` - Clean up resources
 
+### Heap (`heap` package)
+A thread-safe wrapper around Go's `container/heap` that maintains the heap invariant.
+
+**Key Methods:**
+- `Push(x interface{}) bool` - Add an element and maintain heap invariant
+- `Pop() interface{}` - Remove and return the minimum element (O(log n))
+- `Remove(idx int) interface{}` - Remove element at specific index (O(log n))
+- `Len() int` - Get the current heap size
+- `Close()` - Clean up resources
+
+**Usage:**
+The heap package wraps any type that implements `heap.Interface` from the standard library. You provide your own implementation defining the ordering and the wrapper handles thread-safe concurrent access.
+
+```go
+// Define your heap type
+type IntHeap []int
+func (h IntHeap) Len() int           { return len(h) }
+func (h IntHeap) Less(i, j int) bool { return h[i] < h[j] }
+func (h IntHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+func (h *IntHeap) Push(x interface{}) { *h = append(*h, x.(int)) }
+func (h *IntHeap) Pop() interface{} {
+    old := *h
+    n := len(old)
+    x := old[n-1]
+    *h = old[0 : n-1]
+    return x
+}
+
+// Use it safely from multiple goroutines
+ih := &IntHeap{}
+h := heap.New(ih)
+defer h.Close()
+
+h.Push(3)
+h.Push(1)
+h.Push(2)
+fmt.Println(h.Pop()) // 1 (minimum element)
+```
+
 ### Trie (`trie` package)
 A prefix tree data structure for efficient string-based operations.
 
@@ -68,6 +109,7 @@ import (
     "fmt"
     "github.com/koepkeca/gsds/stack"
     "github.com/koepkeca/gsds/queue"
+    "github.com/koepkeca/gsds/heap"
     "github.com/koepkeca/gsds/trie"
 )
 
@@ -87,6 +129,14 @@ func main() {
     q.Enqueue(1)
     q.Enqueue(2)
     fmt.Println(q.Dequeue()) // 1
+    
+    // Create a heap
+    ih := &IntHeap{5, 2, 8, 1}
+    h := heap.New(ih)
+    defer h.Close()
+    
+    h.Push(3)
+    fmt.Println(h.Pop()) // 1 (minimum)
     
     // Create a trie
     t := trie.New()
@@ -155,7 +205,8 @@ go func() {
 ## Performance Characteristics
 
 - **Stack**: O(1) push/pop operations
-- **Queue**: O(1) enqueue/dequeue operations  
+- **Queue**: O(1) enqueue/dequeue operations
+- **Heap**: O(log n) push/pop/remove operations
 - **Trie**: O(k) operations where k is key length
   - Insert/Get/Exists: O(k)
   - Delete: O(k) with automatic cleanup

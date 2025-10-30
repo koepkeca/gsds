@@ -283,4 +283,4 @@ func producerConsumer() {
 
 ## License
 
-MIT License - see LICENSE file for details.
+MIT License - see module LICENSE file for details.

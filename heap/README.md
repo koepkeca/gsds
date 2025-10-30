@@ -16,7 +16,7 @@ This package wraps any `heap.Interface` implementation and makes it safe for con
 ## Installation
 
 ```bash
-go get github.com/yourusername/heap
+go get github.com/koepkeca/gsds
 ```
 
 ## Usage
@@ -29,7 +29,8 @@ package main
 import (
     "container/heap"
     "fmt"
-    "your/package/heap"
+
+	"github.com/koepkeca/gsds/heap"
 )
 
 // IntHeap implements heap.Interface
@@ -174,8 +175,4 @@ context-based lifecycle management.
 
 ## License
 
-MIT License
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+MIT License - See LICENSE in module root
