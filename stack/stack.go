@@ -67,15 +67,16 @@ func (s *S) Close() {
 // so once this is called, you need to clean up after yourself
 // by using the Close method.
 func New() (s *S) {
-	s = &S{op: make(chan func(*stack))}
-	go s.loop(nil)
+	s = NewWithContext(nil)
 	return
 }
 
 // NewWithContext creates a new stack which will cancel upon context cancellation.
 func NewWithContext(ctx context.Context) (s *S) {
 	s = &S{op: make(chan func(*stack))}
-	go s.loop(ctx)
+	ready := make(chan struct{})
+	go s.loop(ctx, ready)
+	<-ready
 	return
 }
 
@@ -85,13 +86,14 @@ type stack []interface{}
 // loop creates the guarded data structure and listens for
 // methods on the op channel. loop terminates when the op
 // channel is closed.
-func (s *S) loop(c context.Context) {
+func (s *S) loop(c context.Context, r chan struct{}) {
 	st := &stack{}
 	ctx, cancel := context.WithCancel(context.Background())
 	if c != nil {
 		ctx, cancel = context.WithCancel(c)
 	}
 	s.cancel = cancel
+	close(r)
 	for {
 		select {
 		case op := <-s.op:

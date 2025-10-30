@@ -90,15 +90,16 @@ func (q *Q) Close() {
 // so once this is called, you need to clean up after yourself
 // by using the Close method.
 func New() (q *Q) {
-	q = &Q{op: make(chan func(*queue))}
-	go q.loop(nil)
+	q = NewWithContext(nil)
 	return
 }
 
 // NewWithContext creates a new queue which wil cancel upon context cancellation
 func NewWithContext(ctx context.Context) (q *Q) {
 	q = &Q{op: make(chan func(*queue))}
-	go q.loop(ctx)
+	ready := make(chan struct{})
+	go q.loop(ctx, ready)
+	<-ready
 	return
 }
 
@@ -108,13 +109,14 @@ type queue []interface{}
 // loop creates the guarded data structure and listens for
 // methods on the op channel. loop terminates when the op
 // channel is closed.
-func (q *Q) loop(c context.Context) {
+func (q *Q) loop(c context.Context, r chan struct{}) {
 	st := &queue{}
 	ctx, cancel := context.WithCancel(context.Background())
 	if c != nil {
 		ctx, cancel = context.WithCancel(c)
 	}
 	q.cancel = cancel
+	close(r)
 	for {
 		select {
 		case op := <-q.op:

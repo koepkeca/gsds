@@ -218,7 +218,7 @@ func newNode() (n *node) {
 }
 
 // loop is the method that runs the goroutine for the data structure
-func (t *T) loop(c context.Context) {
+func (t *T) loop(c context.Context, r chan struct{}) {
 	core := &trie{}
 	core.root = newNode()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -226,6 +226,7 @@ func (t *T) loop(c context.Context) {
 		ctx, cancel = context.WithCancel(c)
 	}
 	t.cancel = cancel
+	close(r)
 	for {
 		select {
 		case op := <-t.op:
@@ -246,14 +247,15 @@ func (t *T) Close() {
 
 // New creates a new trie
 func New() (t *T) {
-	t = &T{op: make(chan func(*trie))}
-	go t.loop(nil)
+	t = NewWithContext(nil)
 	return
 }
 
 // New creates a new trie with a context
 func NewWithContext(ctx context.Context) (t *T) {
 	t = &T{op: make(chan func(*trie))}
-	go t.loop(ctx)
+	ready := make(chan struct{})
+	go t.loop(ctx, ready)
+	<-ready
 	return
 }
